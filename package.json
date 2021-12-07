@@ -1,0 +1,49 @@
+{
+  "name": "@find_bumblebee/fox-core",
+  "version": "0.5.0",
+  "description": "Game server framework based on egg.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test mocha  -r  thunk-mocha --require  intelli-espower-loader 'test/**/*.test.js'",
+    "cov": "nyc --reporter=lcov --reporter=text-lcov npm test",
+    "eslint": "node ./node_modules/.bin/eslint ./  --fix",
+    "docs": "docsify serve ./docs"
+  },
+  "author": "bumblebee",
+  "license": "MIT",
+  "keywords": [
+    "game",
+    "framework"
+  ],
+  "dependencies": {
+    "case": "^1.5.2",
+    "chokidar": "^1.7.0",
+    "co": "^4.6.0",
+    "debug": "^2.6.8",
+    "events-async": "^1.1.0",
+    "extend2": "^1.0.0",
+    "globby": "^6.1.0",
+    "is-type-of": "^1.0.0",
+    "node-homedir": "^1.0.0"
+  },
+  "devDependencies": {
+    "docsify-cli": "^4.1.9",
+    "eslint": "^4.2.0",
+    "eslint-config-egg": "^5.0.0",
+    "intelli-espower-loader": "^1.0.1",
+    "js-yaml": "^3.9.0",
+    "mm": "^2.1.0",
+    "mocha": "^3.4.2",
+    "nyc": "^11.0.3",
+    "power-assert": "^1.4.4",
+    "sinon": "^2.3.8",
+    "thunk-mocha": "^1.0.8"
+  },
+  "nyc": {
+    "per-file": true,
+    "include": [
+      "lib/**/*.js",
+      "index.js"
+    ]
+  }
+}
