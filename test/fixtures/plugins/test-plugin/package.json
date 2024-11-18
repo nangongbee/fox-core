@@ -1,1 +1,7 @@
- 
+{
+    "name": "test-plugin",
+    "foxPlugin": {
+        "name": "testPlugin",
+        "dependencies": []
+    }
+} 

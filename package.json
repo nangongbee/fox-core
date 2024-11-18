@@ -4,10 +4,12 @@
   "description": "Game server framework based on egg.js",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test mocha  -r  thunk-mocha --require  intelli-espower-loader 'test/**/*.test.js'",
+    "test": "npm run lint && mocha test/**/*.test.js",
     "cov": "nyc --reporter=lcov --reporter=text-lcov npm test",
     "eslint": "node ./node_modules/.bin/eslint ./  --fix",
-    "docs": "docsify serve ./docs"
+    "docs": "docsify serve ./docs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "author": "bumblebee",
   "license": "MIT",
@@ -28,7 +30,7 @@
   },
   "devDependencies": {
     "docsify-cli": "^4.1.9",
-    "eslint": "^4.2.0",
+    "eslint": "^7.32.0",
     "eslint-config-egg": "^5.0.0",
     "intelli-espower-loader": "^1.0.1",
     "js-yaml": "^3.9.0",
