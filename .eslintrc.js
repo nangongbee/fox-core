@@ -25,7 +25,7 @@ module.exports = {
         'no-unused-vars': ['error', { 'args': 'none' }],
         
         // 空格和换行
-        'array-bracket-spacing': ['error', 'never'],
+        'array-bracket-spacing': ['error', 'always' ],
         'object-curly-spacing': ['error', 'always'],
         'space-before-function-paren': ['error', {
             'anonymous': 'always',
