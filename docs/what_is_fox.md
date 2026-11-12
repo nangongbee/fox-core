@@ -1,141 +1,82 @@
-# Fox Framework
+# Fox core
 
-Fox 是一个小核心、插件化、高可定制的渐进式游戏服务器端框架。
+`fox-core` 是 Node.js 游戏服务进程的启动核心。它不管具体玩法，只负责插件、配置和生命周期。
 
-## Why Fox?
+游戏目录约定在 `@find_bumblebee/fox` 里。业务仓库不在这个包中。
 
-在开发游戏服务器时,我们常常面临以下挑战:
+## 安装
 
-1. **复杂的业务逻辑**
-   - 游戏逻辑复杂且多变
-   - 需要频繁迭代和更新
-   - 多个子系统之间耦合度高
-
-2. **高性能要求**
-   - 需要处理大量并发连接
-   - 对实时性要求较高
-   - 需要处理频繁的数据读写
-
-3. **运维难度大**
-   - 多进程管理复杂
-   - 配置管理繁琐
-   - 线上问题难以排查
-
-Fox Framework 正是为解决这些问题而生。
-
-## What is Fox?
-
-Fox 是一个专注于游戏服务器开发的 Node.js 框架,具有以下特点:
-
-### 1. 小核心
-- 核心功能精简,只提供最基础的功能
-- 通过插件机制扩展功能
-- 更容易理解和掌握
-
-### 2. 插件化
-- 所有功能都可以通过插件方式扩展
-- 插件之间依赖关系清晰
-- 按需加载,避免冗余
-
-### 3. 高可定制
-- 提供灵活的配置系统
-- 支持运行时动态加载
-- 易于适配不同的游戏类型
-
-### 4. 渐进式
-- 可以渐进地学习和使用
-- 适合不同规模的项目
-- 支持平滑升级
-
-## Core Features
-
-### 1. 模块加载系统
-- 支持多种加载方式
-- 自动管理依赖关系
-- 支持热重载
-
-### 2. 配置管理
-- 多环境配置支持
-- 配置文件自动合并
-- 支持运行时修改
-
-### 3. 插件系统
-- 标准的插件开发规范
-- 插件生命周期管理
-- 插件间通信机制
-
-### 4. 上下文管理
-- 请求级别的上下文隔离
-- 支持中间件机制
-- 灵活的扩展机制
-
-## How to Use?
-
-### 1. 安装
 ```bash
-npm install fox-core --save
+npm install @find_bumblebee/fox-core
 ```
 
-### 2. 创建应用
+## 启动
+
 ```javascript
-const Fox = require('fox-core');
-const app = new Fox();
+const { Application } = require('@find_bumblebee/fox-core');
+
+const app = new Application({
+  baseDir: __dirname,
+  serverType: 'room',
+  serverID: '1',
+  serverEnv: 'local',
+});
+
+app.start().then(() => app.stop());
 ```
 
-### 3. 配置插件
+直接 `new Application` 使用核心 loader。子类若要换 loader，必须在原型上提供 `Symbol.for('FOX_LOADER')`。`@find_bumblebee/fox` 已经这样做。核心的 `_load()` 和 `_run()` 是空的。
+
+## 生命周期
+
+`start()` 的顺序：
+
+1. `app-init`
+2. 加载插件、常量、配置，然后注册 `app/hook` 里的函数
+3. `app-inited`
+4. `_load()`
+5. `app-loaded`
+6. `_run()`
+7. `app-run`
+8. `running = true`
+9. `app-running`
+
+`stop()` 的顺序是 `app-stop`、`app-clear`、`running = false`、`app-stopped`。
+
+`app/hook` 在第 2 步才注册。因此文件里导出的 `app-init` 不会执行。要在 `start()` 之前调用 `addHook('app-init', fn)`。
+
+## 插件
+
+配置文件是 `config/plugin.default.js`。不存在时会读 `config/plugin.js`。
+
 ```javascript
-// config/plugin.js
-exports.redis = {
-enable: true,
-package: 'fox-redis'
+module.exports = {
+  beta: {
+    enable: true,
+    path: require('path').join(__dirname, '../plugins/beta'),
+    dependencies: [ 'alpha' ],
+    serverTypes: [ 'room' ],
+  },
 };
 ```
 
-### 4. 启动服务
-```javascript
-app.start().catch(console.error);
-```
+`env` 不匹配或 `serverTypes` 不匹配时，插件关闭。应用配置里 `enable: false` 的插件，不能被后来的自定义配置重新打开。
 
-## Best Practices
+依赖顺序由 `sequencify` 决定。启用后的列表在 `app.loader.orderPlugins` 和 `app.loader.plugins`。
 
-### 1. 项目结构
+## 配置
 
-├── app
-│ ├── controller // 控制器
-│ ├── service // 服务层
-│ ├── model // 数据模型
-│ └── plugin // 自定义插件
-├── config // 配置文件
-└── test // 测试用例
+合并 `config/config.default.js`，再用 `config/config.${serverEnv}.js` 覆盖。文件可以导出对象，也可以导出 `function(appInfo)`。
 
-### 2. 开发建议
-- 遵循约定优于配置原则
-- 合理使用插件机制
-- 注重代码复用
-- 编写完整的测试用例
+`serverEnv` 的实际顺序：
 
-### 3. 部署建议
-- 使用 PM2 进行进程管理
-- 合理配置日志级别
-- 做好监控和告警
-- 定期进行性能优化
+1. `config/env` 文件存在时，用文件内容，构造参数里的 `serverEnv` 不会生效。
+2. 没有该文件时，用构造参数 `serverEnv`。
+3. 再没有则用 `FOX_SERVER_ENV`。
+4. 最后看 `NODE_ENV`：`test` 为 `unittest`，`production` 为 `prod`，其他为 `local`。
 
-## Community
+`serverType` 使用构造参数、`FOX_SERVER_TYPE`，都没有时为 `normal`。`serverID` 使用构造参数、`FOX_SERVER_ID`，都没有时为进程 pid。
 
-- [GitHub](https://github.com/your-repo/fox)
-- [Issues](https://github.com/your-repo/fox/issues)
-- [Documentation](https://your-repo.github.io/fox)
+## 还没有的能力
 
-## Contributing
-
-欢迎贡献代码或提出建议:
-
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/xxx`)
-3. 提交改动 (`git commit -am 'Add feature xxx'`)
-4. 推送分支 (`git push origin feature/xxx`)
-5. 创建 Pull Request
-
-## License
-
-[MIT](LICENSE)
+这个包不扫描 controller、service、event 或定时任务，也不提供热重载、HTTP、路由和中间件。可用、有限制和不提供的总表在 [framework.md](framework.md)。
