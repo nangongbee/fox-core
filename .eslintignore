@@ -1,7 +1,0 @@
-coverage/
-node_modules/
-test/fixtures/
-*.min.js
-*.debug.js
-dist/
-.eslintrc.js 

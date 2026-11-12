@@ -3,11 +3,14 @@
   "version": "0.5.0",
   "description": "Game server framework based on egg.js",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "lib"
+  ],
   "scripts": {
     "test": "npm run lint && mocha test/**/*.test.js",
-    "cov": "nyc --reporter=lcov --reporter=text-lcov npm test",
-    "eslint": "node ./node_modules/.bin/eslint ./  --fix",
-    "docs": "docsify serve ./docs",
+    "cov": "c8 --reporter=text --reporter=lcov mocha test/**/*.test.js",
+    "docs": "npx docsify-cli serve ./docs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -15,37 +18,40 @@
   "license": "MIT",
   "keywords": [
     "game",
-    "framework"
+    "framework",
+    "game-server",
+    "plugin",
+    "loader"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nangongbee/fox-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nangongbee/fox-core/issues"
+  },
+  "homepage": "https://github.com/nangongbee/fox-core#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "overrides": {
+    "glob": "^14.0.5",
+    "minimatch": "^11.0.8"
+  },
   "dependencies": {
     "case": "^1.5.2",
-    "chokidar": "^1.7.0",
     "co": "^4.6.0",
-    "debug": "^2.6.8",
-    "events-async": "^1.1.0",
+    "debug": "^4.4.3",
     "extend2": "^1.0.0",
-    "globby": "^6.1.0",
+    "globby": "^11.1.0",
     "is-type-of": "^1.0.0",
     "node-homedir": "^1.0.0"
   },
   "devDependencies": {
-    "docsify-cli": "^4.1.9",
-    "eslint": "^7.32.0",
-    "eslint-config-egg": "^5.0.0",
-    "intelli-espower-loader": "^1.0.1",
-    "js-yaml": "^3.9.0",
-    "mm": "^2.1.0",
-    "mocha": "^3.4.2",
-    "nyc": "^11.0.3",
-    "power-assert": "^1.4.4",
-    "sinon": "^2.3.8",
-    "thunk-mocha": "^1.0.8"
-  },
-  "nyc": {
-    "per-file": true,
-    "include": [
-      "lib/**/*.js",
-      "index.js"
-    ]
+    "@eslint/js": "^10.0.1",
+    "c8": "^12.0.0",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "mocha": "^12.0.3"
   }
 }
