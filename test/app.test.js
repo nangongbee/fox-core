@@ -1,46 +1,49 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const Fox = require('../lib/fox');
+const { Application } = require('..');
+
+const demoDir = path.join(__dirname, 'fixtures/apps/demo');
 
 describe('test/app.test.js', () => {
     let app;
 
-    // 每个测试用例执行前都会执行
-    beforeEach(() => {
-        app = new Fox({
-            baseDir: path.join(__dirname, 'fixtures/apps/demo'),
-            serverType: 'test',
+    afterEach(async () => {
+        if (app && app.running) {
+            await app.stop();
+        }
+        app = null;
+    });
+
+    it('should start and stop', async () => {
+        app = new Application({
+            baseDir: demoDir,
+            serverType: 'room',
             serverID: '1',
         });
+        assert.strictEqual(await app.start(), true);
+        assert.strictEqual(app.running, true);
+        assert.strictEqual(app.serverType, 'room');
+        assert.strictEqual(app.serverID, '1');
+        assert.strictEqual(app.config.test, true);
+        assert.strictEqual(await app.stop(), true);
+        assert.strictEqual(app.running, false);
     });
 
-    // 每个测试用例执行后都会执行
-    afterEach(() => {
-        if (app) {
-            return app.close();
-        }
-    });
-
-    it('should start app successfully', async () => {
-        await app.start();
-        assert(app.config);
-        assert(app.plugins);
-        assert(app.isStarted === true);
-    });
-
-    it('should throw error when baseDir not exists', () => {
+    it('should throw when baseDir does not exist', () => {
         assert.throws(() => {
-            new Fox({
+            new Application({
                 baseDir: path.join(__dirname, 'not-exists'),
             });
-        }, /not-exists not exists/);
+        }, /not exists/);
     });
 
-    it('should load custom plugins', async () => {
-        app = new Fox({
-            baseDir: path.join(__dirname, 'fixtures/apps/demo'),
+    it('should keep a plugin disabled by the application config', async () => {
+        app = new Application({
+            baseDir: demoDir,
             plugins: {
                 testPlugin: {
                     enable: true,
@@ -49,32 +52,100 @@ describe('test/app.test.js', () => {
             },
         });
         await app.start();
-        assert(app.plugins.testPlugin);
+        assert.strictEqual(app.loader.plugins.testPlugin, undefined);
     });
 
-    it('should load config successfully', async () => {
+    it('should load an extra plugin and order dependencies', async () => {
+        app = new Application({
+            baseDir: demoDir,
+            serverType: 'room',
+            serverEnv: 'local',
+            plugins: {
+                beta: {
+                    enable: true,
+                    path: path.join(__dirname, 'fixtures/plugins/beta'),
+                    dependencies: [ 'alpha' ],
+                    serverTypes: [ 'room' ],
+                },
+                alpha: {
+                    enable: true,
+                    path: path.join(__dirname, 'fixtures/plugins/alpha'),
+                    env: [ 'local' ],
+                },
+            },
+        });
         await app.start();
-        assert(app.config.test);
-        assert(app.config.env === app.serverEnv);
+        assert.deepStrictEqual(app.loader.orderPlugins.map(plugin => plugin.name), [ 'alpha', 'beta' ]);
     });
 
-    it('should emit lifecycle events', async () => {
-        const lifecycle = [];
-        app.on('configDidLoad', () => {
-            lifecycle.push('configDidLoad');
+    it('should skip a plugin whose serverType does not match', async () => {
+        app = new Application({
+            baseDir: demoDir,
+            serverType: 'lobby',
+            serverEnv: 'local',
+            plugins: {
+                beta: {
+                    enable: true,
+                    path: path.join(__dirname, 'fixtures/plugins/beta'),
+                    dependencies: [ 'alpha' ],
+                    serverTypes: [ 'room' ],
+                },
+                alpha: {
+                    enable: true,
+                    path: path.join(__dirname, 'fixtures/plugins/alpha'),
+                    env: [ 'local' ],
+                },
+            },
         });
-        app.on('beforeStart', () => {
-            lifecycle.push('beforeStart');
-        });
-        app.on('started', () => {
-            lifecycle.push('started');
-        });
-        
         await app.start();
-        assert.deepStrictEqual(lifecycle, [
-            'configDidLoad',
-            'beforeStart', 
-            'started',
+        assert.deepStrictEqual(app.loader.orderPlugins.map(plugin => plugin.name), [ 'alpha' ]);
+    });
+
+    it('should run file hooks after app-init', async () => {
+        app = new Application({
+            baseDir: demoDir,
+            serverType: 'room',
+            serverID: '1',
+        });
+        const order = [];
+        app.order = order;
+        app.addHook('app-init', function () {
+            this.order.push('manual:app-init');
+        });
+        await app.start();
+        assert.deepStrictEqual(order, [
+            'manual:app-init',
+            'file:app-inited',
+            'file:app-loaded',
+            'file:app-run',
+            'file:app-running',
         ]);
     });
-}); 
+
+    it('should read FOX_SERVER_TYPE when the option is omitted', () => {
+        process.env.FOX_SERVER_TYPE = 'gate';
+        try {
+            app = new Application({ baseDir: demoDir });
+            assert.strictEqual(app.serverType, 'gate');
+            assert.strictEqual(app.loader.serverType, 'gate');
+        } finally {
+            delete process.env.FOX_SERVER_TYPE;
+        }
+    });
+
+    it('should let config/env override the serverEnv option', () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fox-core-'));
+        fs.mkdirSync(path.join(dir, 'config'));
+        fs.writeFileSync(path.join(dir, 'package.json'), '{"name":"fox-core-env"}\n');
+        fs.writeFileSync(path.join(dir, 'config/env'), 'prod\n');
+        try {
+            app = new Application({
+                baseDir: dir,
+                serverEnv: 'local',
+            });
+            assert.strictEqual(app.serverEnv, 'prod');
+        } finally {
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+});
