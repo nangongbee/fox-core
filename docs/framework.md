@@ -1,6 +1,6 @@
 # Fox
 
-Node.js 游戏进程框架，由两个包组成。npm 上的最新版本是 `@find_bumblebee/fox-core@0.5.0` 和 `@find_bumblebee/fox@0.5.0`。
+Node.js 游戏进程框架，由两个包组成。当前版本是 `@find_bumblebee/fox-core@0.6.0` 和 `@find_bumblebee/fox@0.6.0`。
 
 它做三件事：按固定顺序启动和关闭进程，按环境和服务器类型加载插件，按目录约定装上 controller、service、event 和 crontab。具体玩法、协议和业务配置留在使用它的进程里。
 
